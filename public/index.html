@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOL Player Finder</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #e4e4e4;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    header h1 {
+      color: #c9aa71;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+
+    header p {
+      color: #8b8b8b;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .panel h2 {
+      color: #c9aa71;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #a0a0a0;
+      font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #c9aa71;
+    }
+
+    .form-group input::placeholder {
+      color: #666;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #c9aa71 0%, #a08050 100%);
+      color: #1a1a2e;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(201,170,113,0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-danger {
+      background: #c53030;
+      color: white;
+      margin-top: 10px;
+    }
+
+    .btn-danger:hover {
+      background: #9b2c2c;
+    }
+
+    .results-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .stat {
+      background: rgba(0,0,0,0.3);
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .stat-value {
+      color: #c9aa71;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    .log-box {
+      background: rgba(0,0,0,0.4);
+      border-radius: 6px;
+      padding: 15px;
+      height: 150px;
+      overflow-y: auto;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.85rem;
+      margin-bottom: 15px;
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+      line-height: 1.4;
+    }
+
+    .log-entry.error {
+      color: #fc8181;
+    }
+
+    .log-entry .time {
+      color: #666;
+      margin-right: 8px;
+    }
+
+    .results-table {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 400px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    th {
+      background: rgba(0,0,0,0.3);
+      color: #c9aa71;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+
+    tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    .rank-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .rank-iron { background: #5c5c5c; }
+    .rank-bronze { background: #8b5a2b; }
+    .rank-silver { background: #7b8b8b; }
+    .rank-gold { background: #c9aa71; color: #1a1a2e; }
+    .rank-platinum { background: #2e8b8b; }
+    .rank-emerald { background: #2e8b57; }
+    .rank-diamond { background: #b9c9e8; color: #1a1a2e; }
+    .rank-master { background: #9b59b6; }
+    .rank-grandmaster { background: #c0392b; }
+    .rank-challenger { background: linear-gradient(135deg, #c9aa71, #4169e1); }
+
+    .time-badge {
+      font-size: 0.85rem;
+      color: #8b8b8b;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #c9aa71;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .status-searching {
+      color: #c9aa71;
+    }
+
+    .help-text {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>LOL Player Finder</h1>
+      <p>Find recently active League of Legends players</p>
+    </header>
+
+    <div class="main-content">
+      <div class="panel settings-panel">
+        <h2>Search Settings</h2>
+        <form id="searchForm">
+          <div class="form-group">
+            <label for="seed">Seed Player (Riot ID)</label>
+            <input type="text" id="seed" placeholder="Name#Tag" required>
+            <div class="help-text">Starting player to find others from</div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="region">Region</label>
+              <select id="region">
+                <option value="na">NA</option>
+                <option value="euw">EUW</option>
+                <option value="eune">EUNE</option>
+                <option value="kr">KR</option>
+                <option value="br">BR</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="gameType">Game Type</label>
+              <select id="gameType">
+                <option value="all">All</option>
+                <option value="ranked">Ranked</option>
+                <option value="normal">Normal</option>
+                <option value="aram">ARAM</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="minRank">Min Rank</label>
+              <select id="minRank">
+                <option value="">Any</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="maxRank">Max Rank</label>
+              <select id="maxRank">
+                <option value="">Any</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="maxAge">Max Age</label>
+              <input type="text" id="maxAge" placeholder="e.g., 1h, 2d">
+              <div class="help-text">How recently they played</div>
+            </div>
+            <div class="form-group">
+              <label for="maxTime">Max Search Time</label>
+              <input type="text" id="maxTime" placeholder="e.g., 5m, 10m">
+              <div class="help-text">Stop searching after</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="maxResults">Max Results</label>
+            <input type="number" id="maxResults" value="20" min="1" max="100">
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="searchBtn">
+            Start Search
+          </button>
+          <button type="button" class="btn btn-danger" id="stopBtn" style="display: none;">
+            Stop Search
+          </button>
+        </form>
+      </div>
+
+      <div class="panel results-panel">
+        <h2>Results</h2>
+
+        <div class="stats-bar">
+          <div class="stat">
+            <div>Status</div>
+            <div class="stat-value" id="statusText">Ready</div>
+          </div>
+          <div class="stat">
+            <div>Found</div>
+            <div class="stat-value" id="foundCount">0</div>
+          </div>
+        </div>
+
+        <div class="log-box" id="logBox">
+          <div class="log-entry">Ready to search...</div>
+        </div>
+
+        <div class="results-table">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>Rank</th>
+                <th>Last Game</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody">
+              <tr>
+                <td colspan="4" style="text-align: center; color: #666;">No results yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Populate rank dropdowns
+    const ranks = ['iron', 'bronze', 'silver', 'gold', 'platinum', 'emerald', 'diamond', 'master', 'grandmaster', 'challenger'];
+    const minRankSelect = document.getElementById('minRank');
+    const maxRankSelect = document.getElementById('maxRank');
+
+    ranks.forEach(rank => {
+      minRankSelect.innerHTML += `<option value="${rank}">${rank.charAt(0).toUpperCase() + rank.slice(1)}</option>`;
+      maxRankSelect.innerHTML += `<option value="${rank}">${rank.charAt(0).toUpperCase() + rank.slice(1)}</option>`;
+    });
+
+    let isSearching = false;
+    let pollInterval = null;
+    let logIndex = 0;
+
+    const searchForm = document.getElementById('searchForm');
+    const searchBtn = document.getElementById('searchBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusText = document.getElementById('statusText');
+    const foundCount = document.getElementById('foundCount');
+    const logBox = document.getElementById('logBox');
+    const resultsBody = document.getElementById('resultsBody');
+
+    function getRankClass(tier) {
+      if (!tier) return '';
+      return 'rank-' + tier.toLowerCase();
+    }
+
+    function formatRank(rank) {
+      if (!rank || !rank.tier) return '<span style="color:#666">Unranked</span>';
+      const tier = rank.tier.charAt(0).toUpperCase() + rank.tier.slice(1);
+      const div = rank.division ? ' ' + rank.division.toUpperCase() : '';
+      const lp = rank.lp ? ` ${rank.lp}LP` : '';
+      return `<span class="rank-badge ${getRankClass(rank.tier)}">${tier}${div}${lp}</span>`;
+    }
+
+    function addLog(message, isError = false) {
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = 'log-entry' + (isError ? ' error' : '');
+      entry.innerHTML = `<span class="time">[${time}]</span>${message}`;
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function clearLogs() {
+      logBox.innerHTML = '';
+      logIndex = 0;
+    }
+
+    function updateResults(results) {
+      foundCount.textContent = results.length;
+
+      if (results.length === 0) {
+        resultsBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #666;">No results yet</td></tr>';
+        return;
+      }
+
+      resultsBody.innerHTML = results.map((player, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>
+            <a href="${player.profileUrl}" target="_blank" style="color: #c9aa71; text-decoration: none;">
+              ${player.summonerName}#${player.tag}
+            </a>
+          </td>
+          <td>${formatRank(player.rank)}</td>
+          <td class="time-badge">${player.lastGameTime?.relativeTime || 'Unknown'}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function pollStatus() {
+      try {
+        // Get logs
+        const logsRes = await fetch(`/api/logs?since=${logIndex}`);
+        const logs = await logsRes.json();
+        logs.forEach(log => {
+          addLog(log.message, log.type === 'error');
+          logIndex++;
+        });
+
+        // Get results
+        const resultsRes = await fetch('/api/results');
+        const results = await resultsRes.json();
+        updateResults(results);
+
+        // Get status
+        const statusRes = await fetch('/api/status');
+        const status = await statusRes.json();
+
+        if (!status.isSearching && isSearching) {
+          // Search finished
+          stopPolling();
+          searchBtn.disabled = false;
+          searchBtn.innerHTML = 'Start Search';
+          stopBtn.style.display = 'none';
+          statusText.innerHTML = 'Complete';
+          isSearching = false;
+        }
+      } catch (e) {
+        console.error('Poll error:', e);
+      }
+    }
+
+    function startPolling() {
+      pollInterval = setInterval(pollStatus, 1000);
+    }
+
+    function stopPolling() {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    }
+
+    searchForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (isSearching) return;
+
+      const seed = document.getElementById('seed').value.trim();
+      if (!seed.includes('#')) {
+        alert('Please enter a valid Riot ID (Name#Tag)');
+        return;
+      }
+
+      clearLogs();
+      updateResults([]);
+
+      isSearching = true;
+      searchBtn.disabled = true;
+      searchBtn.innerHTML = '<span class="spinner"></span>Searching...';
+      stopBtn.style.display = 'block';
+      statusText.innerHTML = '<span class="spinner"></span><span class="status-searching">Searching</span>';
+
+      const params = {
+        seed,
+        region: document.getElementById('region').value,
+        gameType: document.getElementById('gameType').value,
+        minRank: document.getElementById('minRank').value || null,
+        maxRank: document.getElementById('maxRank').value || null,
+        maxAge: document.getElementById('maxAge').value || null,
+        maxTime: document.getElementById('maxTime').value || null,
+        maxResults: document.getElementById('maxResults').value
+      };
+
+      try {
+        const res = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error);
+        }
+
+        addLog('Search started...');
+        startPolling();
+      } catch (e) {
+        addLog('Error: ' + e.message, true);
+        searchBtn.disabled = false;
+        searchBtn.innerHTML = 'Start Search';
+        stopBtn.style.display = 'none';
+        statusText.innerHTML = 'Error';
+        isSearching = false;
+      }
+    });
+
+    stopBtn.addEventListener('click', async () => {
+      try {
+        await fetch('/api/stop', { method: 'POST' });
+        addLog('Stopping search...');
+      } catch (e) {
+        console.error('Stop error:', e);
+      }
+    });
+  </script>
+</body>
+</html>

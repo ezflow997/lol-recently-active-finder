@@ -1,0 +1,18 @@
+node_modules/
+*.json
+!package.json
+!package-lock.json
+.env
+*.log
+
+# Debug/test files
+debug_*.js
+check_*.js
+find_silver*.js
+nul
+
+# Local files
+*.ahk
+discovered_players*.json
+search_results*.json
+recent_players*.json

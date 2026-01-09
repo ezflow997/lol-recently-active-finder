@@ -83,12 +83,17 @@ Run directly in your browser without installing anything:
 
 1. Click the green **Code** button on the repo
 2. Select **Codespaces** → **Create codespace on master**
-3. Wait for it to set up, then run in the terminal:
+3. Wait for it to set up automatically (installs dependencies)
+4. Run in the terminal:
    ```bash
-   npm install
    npm run ui
    ```
-4. Click the popup link or go to the **Ports** tab to open the UI
+5. Click the popup link or go to the **Ports** tab to open the UI
+
+**If you get a Chrome/Puppeteer error**, run this first:
+```bash
+bash setup-codespace.sh
+```
 
 ## How It Works
 

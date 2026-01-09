@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const { PlayerDiscovery } = require('./src/discovery');
 const { RANK_ORDER, parseMaxAge } = require('./src/config');
 
@@ -55,6 +56,51 @@ app.get('/api/results', (req, res) => {
 app.get('/api/logs', (req, res) => {
   const since = parseInt(req.query.since) || 0;
   res.json(searchLog.slice(since));
+});
+
+// List saved result files
+app.get('/api/saved', (req, res) => {
+  try {
+    const files = fs.readdirSync(__dirname)
+      .filter(f => f.endsWith('.json') && f !== 'package.json' && f !== 'package-lock.json')
+      .map(f => {
+        const stats = fs.statSync(path.join(__dirname, f));
+        let playerCount = 0;
+        try {
+          const data = JSON.parse(fs.readFileSync(path.join(__dirname, f), 'utf-8'));
+          playerCount = Array.isArray(data) ? data.length : (data.players?.length || 0);
+        } catch (e) {}
+        return {
+          name: f,
+          modified: stats.mtime,
+          size: stats.size,
+          playerCount
+        };
+      })
+      .sort((a, b) => new Date(b.modified) - new Date(a.modified));
+    res.json(files);
+  } catch (e) {
+    res.json([]);
+  }
+});
+
+// Load a saved result file
+app.get('/api/saved/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    if (!filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    const filepath = path.join(__dirname, filename);
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    const data = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+    const players = Array.isArray(data) ? data : (data.players || []);
+    res.json(players);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load file' });
+  }
 });
 
 app.post('/api/search', async (req, res) => {

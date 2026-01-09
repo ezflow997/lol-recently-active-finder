@@ -268,6 +268,84 @@
       color: #666;
       margin-top: 3px;
     }
+
+    .saved-files {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .saved-files h3 {
+      color: #c9aa71;
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    .file-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+      margin-bottom: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .file-item:hover {
+      background: rgba(201,170,113,0.2);
+    }
+
+    .file-item.active {
+      background: rgba(201,170,113,0.3);
+      border: 1px solid #c9aa71;
+    }
+
+    .file-name {
+      font-size: 0.85rem;
+      color: #e4e4e4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 180px;
+    }
+
+    .file-count {
+      font-size: 0.75rem;
+      color: #c9aa71;
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    .no-files {
+      color: #666;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 10px;
+    }
+
+    .btn-refresh {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #a0a0a0;
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      margin-left: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .btn-refresh:hover {
+      border-color: #c9aa71;
+      color: #c9aa71;
+    }
   </style>
 </head>
 <body>
@@ -349,6 +427,13 @@
             Stop Search
           </button>
         </form>
+
+        <div class="saved-files">
+          <h3>Saved Results <button class="btn-refresh" id="refreshBtn">Refresh</button></h3>
+          <div class="file-list" id="fileList">
+            <div class="no-files">Loading...</div>
+          </div>
+        </div>
       </div>
 
       <div class="panel results-panel">
@@ -569,6 +654,70 @@
         console.error('Stop error:', e);
       }
     });
+
+    // Saved files functionality
+    const fileList = document.getElementById('fileList');
+    const refreshBtn = document.getElementById('refreshBtn');
+    let activeFile = null;
+
+    async function loadSavedFiles() {
+      try {
+        const res = await fetch('/api/saved');
+        const files = await res.json();
+
+        if (files.length === 0) {
+          fileList.innerHTML = '<div class="no-files">No saved results</div>';
+          return;
+        }
+
+        fileList.innerHTML = files.map(f => `
+          <div class="file-item${activeFile === f.name ? ' active' : ''}" data-file="${f.name}">
+            <span class="file-name" title="${f.name}">${f.name}</span>
+            <span class="file-count">${f.playerCount} players</span>
+          </div>
+        `).join('');
+
+        // Add click handlers
+        fileList.querySelectorAll('.file-item').forEach(item => {
+          item.addEventListener('click', () => loadSavedFile(item.dataset.file));
+        });
+      } catch (e) {
+        fileList.innerHTML = '<div class="no-files">Error loading files</div>';
+      }
+    }
+
+    async function loadSavedFile(filename) {
+      if (isSearching) {
+        alert('Please wait for the current search to finish');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/saved/${encodeURIComponent(filename)}`);
+        if (!res.ok) throw new Error('Failed to load file');
+
+        const players = await res.json();
+        activeFile = filename;
+
+        // Update UI
+        updateResults(players);
+        clearLogs();
+        addLog(`Loaded ${players.length} players from ${filename}`);
+        statusText.innerHTML = 'Loaded';
+
+        // Update active state in file list
+        fileList.querySelectorAll('.file-item').forEach(item => {
+          item.classList.toggle('active', item.dataset.file === filename);
+        });
+      } catch (e) {
+        addLog('Error loading file: ' + e.message, true);
+      }
+    }
+
+    refreshBtn.addEventListener('click', loadSavedFiles);
+
+    // Load saved files on page load
+    loadSavedFiles();
   </script>
 </body>
 </html>

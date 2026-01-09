@@ -318,6 +318,11 @@ async function getPlayerProfile(region, name, tag, delay = DELAY_MS) {
 
   const lastGameTime = parseLastGameTime($);
 
+  // Debug: log if time was found
+  if (lastGameTime) {
+    console.log(`    Time found: ${lastGameTime.relativeTime}`);
+  }
+
   const profile = {
     summonerName: name,
     tag: tag,
@@ -372,8 +377,7 @@ async function getPlayerProfilesBatch(region, players, onResult) {
         if (profile) {
           const fullPlayer = {
             ...profile,
-            lastGameType: player.gameType,
-            lastGameTime: player.lastGameTime,
+            lastGameType: player.gameType || profile.lastGameType,
             discoveredFrom: player.discoveredFrom
           };
           if (onResult) onResult(fullPlayer);

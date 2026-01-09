@@ -117,15 +117,13 @@ async function fetchPage(url, retries = 2) {
 
 function parseLastGameTime($) {
   const bodyText = $('body').text();
+  const now = Date.now();
 
-  // Look for patterns like "X minutes ago", "X hours ago", "X days ago"
+  // Pattern 1: "X minutes ago", "X hours ago", "X days ago"
   const timeMatch = bodyText.match(/(\d+)\s*(second|minute|hour|day|week|month)s?\s*ago/i);
-
   if (timeMatch) {
     const value = parseInt(timeMatch[1], 10);
     const unit = timeMatch[2].toLowerCase();
-
-    const now = Date.now();
     let msAgo = 0;
 
     switch (unit) {
@@ -144,13 +142,11 @@ function parseLastGameTime($) {
     };
   }
 
-  // Try to match short format like "5m ago", "2h ago", "3d ago"
+  // Pattern 2: Short format "5m ago", "2h ago", "3d ago"
   const shortMatch = bodyText.match(/(\d+)\s*(s|m|h|d|w)\s*ago/i);
   if (shortMatch) {
     const value = parseInt(shortMatch[1], 10);
     const unit = shortMatch[2].toLowerCase();
-
-    const now = Date.now();
     let msAgo = 0;
 
     switch (unit) {
@@ -167,6 +163,59 @@ function parseLastGameTime($) {
       relativeTime: `${value} ${units[unit]}${value > 1 ? 's' : ''} ago`,
       msAgo
     };
+  }
+
+  // Pattern 3: "a minute ago", "an hour ago", "a day ago"
+  const singleMatch = bodyText.match(/\b(a|an)\s+(minute|hour|day|week|month)\s+ago/i);
+  if (singleMatch) {
+    const unit = singleMatch[2].toLowerCase();
+    let msAgo = 0;
+
+    switch (unit) {
+      case 'minute': msAgo = 60 * 1000; break;
+      case 'hour': msAgo = 60 * 60 * 1000; break;
+      case 'day': msAgo = 24 * 60 * 60 * 1000; break;
+      case 'week': msAgo = 7 * 24 * 60 * 60 * 1000; break;
+      case 'month': msAgo = 30 * 24 * 60 * 60 * 1000; break;
+    }
+
+    return {
+      timestamp: new Date(now - msAgo).toISOString(),
+      relativeTime: `1 ${unit} ago`,
+      msAgo
+    };
+  }
+
+  // Pattern 4: Look for time in match history elements specifically
+  const matchTimeEl = $('[class*="time"], [class*="ago"], [class*="date"]').first().text();
+  if (matchTimeEl) {
+    const elMatch = matchTimeEl.match(/(\d+)\s*(s|m|h|d|w|second|minute|hour|day|week|month)/i);
+    if (elMatch) {
+      const value = parseInt(elMatch[1], 10);
+      let unit = elMatch[2].toLowerCase();
+      let msAgo = 0;
+
+      // Normalize short units
+      const unitMap = { s: 'second', m: 'minute', h: 'hour', d: 'day', w: 'week' };
+      if (unitMap[unit]) unit = unitMap[unit];
+
+      switch (unit) {
+        case 'second': msAgo = value * 1000; break;
+        case 'minute': msAgo = value * 60 * 1000; break;
+        case 'hour': msAgo = value * 60 * 60 * 1000; break;
+        case 'day': msAgo = value * 24 * 60 * 60 * 1000; break;
+        case 'week': msAgo = value * 7 * 24 * 60 * 60 * 1000; break;
+        case 'month': msAgo = value * 30 * 24 * 60 * 60 * 1000; break;
+      }
+
+      if (msAgo > 0) {
+        return {
+          timestamp: new Date(now - msAgo).toISOString(),
+          relativeTime: `${value} ${unit}${value > 1 ? 's' : ''} ago`,
+          msAgo
+        };
+      }
+    }
   }
 
   return null;

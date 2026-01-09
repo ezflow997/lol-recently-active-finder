@@ -17,8 +17,12 @@ async function getBrowser() {
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
         '--window-size=1920,1080',
-        '--disable-dev-shm-usage'
+        '--single-process',
+        '--no-zygote'
       ]
     });
   }

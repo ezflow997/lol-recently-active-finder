@@ -32,7 +32,9 @@ function matchesRank(rank, minRank, maxRank) {
 
 function matchesMaxAge(lastGameTime, maxAgeMs) {
   if (!maxAgeMs) return true;
-  if (!lastGameTime || !lastGameTime.msAgo) return false;
+
+  // If we couldn't parse the time, include the player (don't filter out unknowns)
+  if (!lastGameTime || !lastGameTime.msAgo) return true;
 
   return lastGameTime.msAgo <= maxAgeMs;
 }

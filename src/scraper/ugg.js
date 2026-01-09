@@ -114,6 +114,31 @@ function parseLastGameTime($) {
     };
   }
 
+  // Try to match short format like "5m ago", "2h ago", "3d ago"
+  const shortMatch = bodyText.match(/(\d+)\s*(s|m|h|d|w)\s*ago/i);
+  if (shortMatch) {
+    const value = parseInt(shortMatch[1], 10);
+    const unit = shortMatch[2].toLowerCase();
+
+    const now = Date.now();
+    let msAgo = 0;
+
+    switch (unit) {
+      case 's': msAgo = value * 1000; break;
+      case 'm': msAgo = value * 60 * 1000; break;
+      case 'h': msAgo = value * 60 * 60 * 1000; break;
+      case 'd': msAgo = value * 24 * 60 * 60 * 1000; break;
+      case 'w': msAgo = value * 7 * 24 * 60 * 60 * 1000; break;
+    }
+
+    const units = { s: 'second', m: 'minute', h: 'hour', d: 'day', w: 'week' };
+    return {
+      timestamp: new Date(now - msAgo).toISOString(),
+      relativeTime: `${value} ${units[unit]}${value > 1 ? 's' : ''} ago`,
+      msAgo
+    };
+  }
+
   return null;
 }
 

@@ -103,6 +103,27 @@ app.get('/api/saved/:filename', (req, res) => {
   }
 });
 
+// Delete a saved result file
+app.delete('/api/saved/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    if (!filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    if (filename === 'package.json' || filename === 'package-lock.json') {
+      return res.status(403).json({ error: 'Cannot delete system files' });
+    }
+    const filepath = path.join(__dirname, filename);
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    fs.unlinkSync(filepath);
+    res.json({ message: 'File deleted', filename });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete file' });
+  }
+});
+
 app.post('/api/search', async (req, res) => {
   if (isSearching) {
     return res.status(400).json({ error: 'Search already in progress' });

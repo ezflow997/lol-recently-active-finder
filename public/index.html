@@ -324,6 +324,28 @@
       border-radius: 10px;
     }
 
+    .file-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-delete {
+      background: transparent;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      padding: 2px 5px;
+      font-size: 0.9rem;
+      border-radius: 3px;
+      transition: all 0.2s;
+    }
+
+    .btn-delete:hover {
+      color: #fc8181;
+      background: rgba(252,129,129,0.1);
+    }
+
     .no-files {
       color: #666;
       font-size: 0.85rem;
@@ -728,16 +750,57 @@
         fileList.innerHTML = files.map(f => `
           <div class="file-item${activeFile === f.name ? ' active' : ''}" data-file="${f.name}">
             <span class="file-name" title="${f.name}">${f.name}</span>
-            <span class="file-count">${f.playerCount} players</span>
+            <div class="file-actions">
+              <span class="file-count">${f.playerCount} players</span>
+              <button class="btn-delete" data-file="${f.name}" title="Delete">X</button>
+            </div>
           </div>
         `).join('');
 
-        // Add click handlers
+        // Add click handlers for loading
         fileList.querySelectorAll('.file-item').forEach(item => {
-          item.addEventListener('click', () => loadSavedFile(item.dataset.file));
+          item.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('btn-delete')) {
+              loadSavedFile(item.dataset.file);
+            }
+          });
+        });
+
+        // Add click handlers for delete
+        fileList.querySelectorAll('.btn-delete').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteSavedFile(btn.dataset.file);
+          });
         });
       } catch (e) {
         fileList.innerHTML = '<div class="no-files">Error loading files</div>';
+      }
+    }
+
+    async function deleteSavedFile(filename) {
+      if (!confirm(`Delete ${filename}?`)) return;
+
+      try {
+        const res = await fetch(`/api/saved/${encodeURIComponent(filename)}`, {
+          method: 'DELETE'
+        });
+
+        if (!res.ok) throw new Error('Failed to delete');
+
+        addLog(`Deleted ${filename}`);
+
+        // Clear results if this was the active file
+        if (activeFile === filename) {
+          activeFile = null;
+          updateResults([]);
+          statusText.innerHTML = 'Ready';
+        }
+
+        // Refresh file list
+        loadSavedFiles();
+      } catch (e) {
+        addLog('Error deleting file: ' + e.message, true);
       }
     }
 

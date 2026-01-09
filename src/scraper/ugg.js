@@ -6,11 +6,22 @@ puppeteer.use(StealthPlugin());
 
 const BASE_URL = 'https://u.gg';
 const DELAY_MS = 500;
-const MAX_CONCURRENT = 3; // Reduce to avoid detection
+const MAX_CONCURRENT = 1; // Process one at a time for stability
 
 let browser = null;
 
 async function getBrowser() {
+  if (browser) {
+    try {
+      // Check if browser is still connected
+      if (!browser.connected) {
+        browser = null;
+      }
+    } catch (e) {
+      browser = null;
+    }
+  }
+
   if (!browser) {
     browser = await puppeteer.launch({
       headless: 'new',
@@ -20,9 +31,7 @@ async function getBrowser() {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--disable-software-rasterizer',
-        '--window-size=1920,1080',
-        '--single-process',
-        '--no-zygote'
+        '--window-size=1920,1080'
       ]
     });
   }
@@ -31,7 +40,11 @@ async function getBrowser() {
 
 async function closeBrowser() {
   if (browser) {
-    await browser.close();
+    try {
+      await browser.close();
+    } catch (e) {
+      // Ignore close errors
+    }
     browser = null;
   }
 }
@@ -48,41 +61,58 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function fetchPage(url) {
-  const browserInstance = await getBrowser();
-  const page = await browserInstance.newPage();
+async function fetchPage(url, retries = 2) {
+  let page = null;
 
-  try {
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
-    await page.setViewport({ width: 1920, height: 1080 });
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const browserInstance = await getBrowser();
+      page = await browserInstance.newPage();
 
-    const response = await page.goto(url, {
-      waitUntil: 'networkidle2',
-      timeout: 60000
-    });
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
+      await page.setViewport({ width: 1920, height: 1080 });
 
-    const status = response.status();
+      const response = await page.goto(url, {
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      });
 
-    if (status === 404 || status === 403) {
+      const status = response.status();
+
+      if (status === 404 || status === 403) {
+        await page.close();
+        return null;
+      }
+
+      // Wait for dynamic content to fully load
+      await sleep(3000);
+
+      // Scroll to load match history
+      await page.evaluate(() => window.scrollTo(0, 1500));
+      await sleep(1500);
+
+      const html = await page.content();
       await page.close();
-      return null;
+      return html;
+    } catch (error) {
+      try { if (page) await page.close(); } catch (e) {}
+
+      // If browser crashed, reset it
+      if (error.message.includes('Target closed') || error.message.includes('Protocol error')) {
+        console.log(`  Browser crashed, restarting...`);
+        await closeBrowser();
+      }
+
+      if (attempt < retries) {
+        console.log(`  Retry ${attempt + 1}/${retries}...`);
+        await sleep(2000);
+      } else {
+        console.error(`  Fetch error: ${error.message}`);
+        return null;
+      }
     }
-
-    // Wait for dynamic content to fully load
-    await sleep(4000);
-
-    // Scroll to load match history
-    await page.evaluate(() => window.scrollTo(0, 1500));
-    await sleep(2000);
-
-    const html = await page.content();
-    await page.close();
-    return html;
-  } catch (error) {
-    try { await page.close(); } catch (e) {}
-    console.error(`  Fetch error: ${error.message}`);
-    return null;
   }
+  return null;
 }
 
 function parseLastGameTime($) {

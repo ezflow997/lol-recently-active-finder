@@ -346,6 +346,26 @@
       border-color: #c9aa71;
       color: #c9aa71;
     }
+
+    .filter-stat {
+      flex-grow: 1;
+    }
+
+    .age-filter-select {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      color: #c9aa71;
+      padding: 5px 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+
+    .age-filter-select:focus {
+      outline: none;
+      border-color: #c9aa71;
+    }
   </style>
 </head>
 <body>
@@ -448,6 +468,22 @@
             <div>Found</div>
             <div class="stat-value" id="foundCount">0</div>
           </div>
+          <div class="stat filter-stat">
+            <div>Filter by Age</div>
+            <select id="ageFilter" class="age-filter-select">
+              <option value="">All</option>
+              <option value="300000">5 minutes</option>
+              <option value="900000">15 minutes</option>
+              <option value="1800000">30 minutes</option>
+              <option value="3600000">1 hour</option>
+              <option value="7200000">2 hours</option>
+              <option value="21600000">6 hours</option>
+              <option value="43200000">12 hours</option>
+              <option value="86400000">1 day</option>
+              <option value="172800000">2 days</option>
+              <option value="604800000">1 week</option>
+            </select>
+          </div>
         </div>
 
         <div class="log-box" id="logBox">
@@ -489,6 +525,7 @@
     let isSearching = false;
     let pollInterval = null;
     let logIndex = 0;
+    let allResults = []; // Store unfiltered results
 
     const searchForm = document.getElementById('searchForm');
     const searchBtn = document.getElementById('searchBtn');
@@ -497,6 +534,7 @@
     const foundCount = document.getElementById('foundCount');
     const logBox = document.getElementById('logBox');
     const resultsBody = document.getElementById('resultsBody');
+    const ageFilter = document.getElementById('ageFilter');
 
     function getRankClass(tier) {
       if (!tier) return '';
@@ -525,15 +563,27 @@
       logIndex = 0;
     }
 
-    function updateResults(results) {
-      foundCount.textContent = results.length;
+    function updateResults(results, storeResults = true) {
+      if (storeResults) {
+        allResults = results;
+      }
 
-      if (results.length === 0) {
-        resultsBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #666;">No results yet</td></tr>';
+      // Apply age filter
+      const maxAgeMs = parseInt(ageFilter.value) || 0;
+      let filtered = results;
+
+      if (maxAgeMs > 0) {
+        filtered = results.filter(p => p.lastGameTime?.msAgo && p.lastGameTime.msAgo <= maxAgeMs);
+      }
+
+      foundCount.textContent = filtered.length + (maxAgeMs > 0 ? ` / ${results.length}` : '');
+
+      if (filtered.length === 0) {
+        resultsBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #666;">No results match filter</td></tr>';
         return;
       }
 
-      resultsBody.innerHTML = results.map((player, i) => `
+      resultsBody.innerHTML = filtered.map((player, i) => `
         <tr>
           <td>${i + 1}</td>
           <td>
@@ -546,6 +596,11 @@
         </tr>
       `).join('');
     }
+
+    // Age filter change handler
+    ageFilter.addEventListener('change', () => {
+      updateResults(allResults, false);
+    });
 
     async function pollStatus() {
       try {

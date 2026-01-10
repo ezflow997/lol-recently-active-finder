@@ -598,6 +598,13 @@
         filtered = results.filter(p => p.lastGameTime?.msAgo && p.lastGameTime.msAgo <= maxAgeMs);
       }
 
+      // Sort by last game time (most recent first, unknown at end)
+      filtered = [...filtered].sort((a, b) => {
+        const aTime = a.lastGameTime?.msAgo ?? Infinity;
+        const bTime = b.lastGameTime?.msAgo ?? Infinity;
+        return aTime - bTime;
+      });
+
       foundCount.textContent = filtered.length + (maxAgeMs > 0 ? ` / ${results.length}` : '');
 
       if (filtered.length === 0) {
